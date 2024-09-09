@@ -10,9 +10,10 @@ Description: This application will serve as a platform for managing collections 
 //require the Express module and create an instance of it
 const express = require ('express');
 const app = express();
+const books= require('./database/books'); // import the "books" collection
 
 //Add a GET route for the root URL ("/"). This route will serve as the landing page of application.
-app.get('/', (req, res) => {
+ app.get('/', (req, res) => {
   res.send(`
     <html>
       <head>
@@ -23,6 +24,32 @@ app.get('/', (req, res) => {
         <p>Manage your book collection with ease.</p>
       </body>
     </html>`);
+}); 
+
+// GET route that returns an array of books
+app.get('/api/books', async (req, res) => {
+  try {
+    const allBooks= await books.find(); // Find all books in the mock database
+    res.status(200).json(allBooks);
+  } catch (error) {
+    res.status(500).json({message: 'Error retrieving books'});
+  }
+});
+
+// GET route that returns a single book by id
+app.get('/api/books/:id', async (req, res)=> {
+  try{
+    const id = parseInt(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({message: 'ID must be a number'});
+    }
+
+    const book = await books.findOne({ id: id});
+    res.status(200).json(book);
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving book'});
+  }
 });
 
 //404 Error Middleware: This handles any requests to routes that do not exist
