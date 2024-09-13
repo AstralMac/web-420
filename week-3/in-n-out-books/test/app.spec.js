@@ -35,3 +35,35 @@ describe(' Chapter 4: API Tests', () => {
     expect(response.body).toHaveProperty('message', 'ID must be a number');
   });
 });
+
+describe('Chapter 4: API Tests pt 2', ()=> {
+  test('Should return a 201-status code when adding a new book', async () =>{
+    const response = await request(app)
+      .post('/api/books')
+      .send({
+        id: 7,
+        title : 'Percy Jackson and the Lightning Thief',
+        author: 'Rick Riordan'
+      });
+    expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('id')
+  });
+
+  test('should return a 400-status code when adding a new book with missing title', async () =>{
+    const response = await request(app)
+      .post('/api/books')
+      .send({
+        id: 6,
+        author: 'Rick Riordan'
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.type).toBe('error');
+    expect(response.body.status).toBe(400);
+    expect(response.body.message).toBe('Bad Request');
+  });
+
+  test('should return a 204-status code when deleting a book', async () =>{
+    const res = await request(app).delete("/api/books/99");
+  }, 10000);
+});
