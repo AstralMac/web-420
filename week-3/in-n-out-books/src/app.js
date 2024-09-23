@@ -91,4 +91,27 @@ app.put('/api/books/:id', async (req, res, next) => {
     if (!updatedBook.title) return res.status(400).json({ message: 'Bad Request: Missing Title' });
 
     const result = await books.updateOne({ id: id }, { $set: updatedBook });
-    if (result.modifiedCount === 0) return res.status(404).json({ m
+    if (result.modifiedCount === 0) return res.status(404).json({ message: 'Book not found' });
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+//404 Error Middleware: This handles any requests to routes that do not exist
+app.use((req, res, next) => {
+  res.status(404).send('Page Not Found');
+});
+
+//500 Error Middleware: This handles server errors. If the app is in development mode, include the error stack.
+app.use((err, req, res, next) => {
+  res.status(500).json({
+    message: 'Internal Server Error',
+    ...app(process.env.NODE_ENV === 'development' && {stack: err.stack})
+  });
+});
+
+// Export Express  application
+module.exports = app;
