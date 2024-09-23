@@ -81,6 +81,24 @@ app.post('/api/books', async (req, res, next) => {
   }
 });
 
+// PUT route to update a book by id
+app.put('/api/books/:id', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'ID must be a number' });
+
+    const updatedBook = req.body;
+    if (!updatedBook.title) return res.status(400).json({ message: 'Bad Request: Missing Title' });
+
+    const result = await books.updateOne({ id: id }, { $set: updatedBook });
+    if (result.modifiedCount === 0) return res.status(404).json({ message: 'Book not found' });
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 //404 Error Middleware: This handles any requests to routes that do not exist
 app.use((req, res, next) => {

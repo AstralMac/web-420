@@ -44,13 +44,13 @@ app.get("/", async(req,res,next) => {
     </head>
     <body>
       <div class ="container">
-        <header> 
+        <header>
           <h1> Cookbook App</h1>
           <h2> Discover and Share Amazing Recipes </h2>
         </header>
-        
+
         <br/>
-        
+
         <main>
           <div class = "recipe">
             <h3> Classic Beef Tacos</h3>
@@ -59,13 +59,13 @@ app.get("/", async(req,res,next) => {
           <div class="recipe">
             <h3>Vegetarian Lasagna</h3>
             <p>1. Layer lasagna noodles, marinara sauce, and cheese in a baking dish.<br>2. Bake at 375 degrees for 45 minutes.<br>3. Let cool before serving.</p>
-          </div> 
+          </div>
         </main>
       </div>
     </body>
   </html>`; // end HTML content for the landing page
 
-res.send(html); // Sends the HTML content to the client 
+res.send(html); // Sends the HTML content to the client
 });
 
 // Route to get all recipes
@@ -90,7 +90,7 @@ app.get("/api/recipes/:id", async (req, res, next) => {
     if(isNaN(id)){
       return next(createError(400, "Input must be a number"));
     };
-    
+
     const recipe = await recipes.findOne({ id: Number(req.params.id) });
     if (recipe) {
       console.log("Recipe:", recipe);
@@ -104,7 +104,7 @@ app.get("/api/recipes/:id", async (req, res, next) => {
   }
 });
 
-// Duplicate route 
+// Duplicate route
 
  /*// Catch unexpected error and return one recipe
 app.get("/api/recipes/:id", async (req, res, next) => {
@@ -151,6 +151,76 @@ app.post("/api/recipes", async (req, res, next) => {
   }
 });
 
+app.put("/api/recipes/:id", async (req, res, next) => {
+  try {
+    let { id } = req.params;
+    let recipe = req.body;
+    id = parseInt(id);
+
+    if (isNaN(id)) {
+      return next(createError(400, "Input must be a number"));
+    }
+
+    const expectedKeys = ["name", "ingredients"];
+    const receivedKeys = Object.keys(recipe);
+
+    // Correct the logic for key validation
+    if (!receivedKeys.every(key => expectedKeys.includes(key)) || receivedKeys.length !== expectedKeys.length) {
+      console.error("Bad Request: Missing keys or extra keys", receivedKeys);
+      return next(createError(400, "Bad Request"));
+    }
+
+    // Update the recipe in the database
+    const result = await recipes.updateOne({ id: id }, { $set: recipe });
+
+    if (result.matchedCount === 0) {
+      console.error("Recipe not found");
+      return next(createError(404, "Recipe not found"));
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    console.error("Error", err.message);
+    next(err);
+  }
+});
+
+
+/*
+
+Duplicate PUT route
+app.put("/api/recipes/:id", async (req, res, next)=> {
+  try{
+    let {id} = req.params;
+    let recipe = req.body;
+    id = parseInt(id);
+
+    if(isNaN(id)){
+      return next(createError(400, "Input must be a number"));
+    }
+
+    const expectKeys = ["name", "ingredients"];
+    const receivedKeys = Object.keys(recipe);
+
+    if(!receivedKeys.every(key => expectedKeys.includes(key))||
+  receivedKeys.length !==expectKeys.length){
+    console.error("Bad Request: Missing keys or extra keys", receivedKeys);
+    return next(createError(400, "Bad Request"));
+  }
+
+    const result = await recipes.updateOne({id: id}, recipe);
+    console.log("Result:", result);
+    res.status(204).send();
+  } catch(err) {
+    if(err.message === "No matching item found") {
+      console.log("Recipe not found", err.message)
+      return next(createError(404, "Recipe not found"));
+    }
+    console .error("Error", err.message);
+    next(err);
+  }
+});
+*/
 app.delete("/api/recipes/:id", async (req, res, next) => {
   try {
     const{id} = req.params;
