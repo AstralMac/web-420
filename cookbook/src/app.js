@@ -11,6 +11,7 @@ const bcrypt = require("bcryptjs");
 const createError = require("http-errors");
 const recipes = require ("../database/recipes")
 const app = express(); // Creates an Express application
+const users = require("../database/users"); // Import the users collection
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true}));
@@ -147,6 +148,59 @@ app.post("/api/recipes", async (req, res, next) => {
     res.status(201).send({ id: result.ops[0].id});
   } catch (err) {
     console.error("Error", err.message);
+    next(err);
+  }
+});
+
+
+//Post route to register
+app.post("/api/register", async(req, res, next) => {
+  console.log("Request body: ", req.body);
+  try{
+    const user = req.body; // Destructure email and password
+
+    const expectedKeys = ["email","password"];
+    const receivedKeys = Object.keys(user);
+
+    //Validate that only expected keys are present
+    if(
+      !receivedKeys.every(key => expectedKeys.includes(key)) ||
+      receivedKeys.length !== expectedKeys.length
+    ) {
+      console.error("Bad Request: Missing keys or extra keys", receivedKeys);
+      return next(createError(400, "Bad Request"));
+    }
+
+    const {email, password} = user;
+    // Check for duplicate users
+    let duplicateUser;
+    try{
+      duplicateUser = await users.findOne({email: email});
+    }catch(err){
+      duplicateUser = null;
+    }
+
+    if(duplicateUser){
+      console.error("Conflict: User already exists");
+      return next(createError(409, "Conflict"));
+    }
+
+    // Hash password
+    const hashedPassword= bcrypt.hashSync(password, 10);
+
+    console.log("email", email);
+    console.log("password", hashedPassword);
+
+    //insert the new user
+    const newUser = await users.insertOne({
+      email: user.email,
+      password: hashedPassword
+    });
+
+    res.status(200).send({user:user, message: "Registration successful"});
+  }catch(err){
+    console.error("Error: ", err);
+    console.error("Error: ", err.message);
     next(err);
   }
 });

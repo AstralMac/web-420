@@ -9,11 +9,15 @@ Description: This application will serve as a platform for managing collections 
 
 //require the Express module and create an instance of it
 const express = require ('express');
-const app = express();
-const books= require('./database/books'); // import the "books" collection
+const bcrypt = require("bcryptjs");
+const app = express(); // Creates an Express application
+const books= require('../database/books'); // import the "books" collection
+const users = require('../database/users'); // import the "users"
+const collection = require('../database/collection'); // import collection
 
 //middleware to parse JSON bodies
 app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
 //Add a GET route for the root URL ("/"). This route will serve as the landing page of application.
  app.get('/', (req, res) => {
@@ -55,6 +59,35 @@ app.get('/api/books/:id', async (req, res)=> {
   }
 });
 
+// POST route for user login
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if email or password is missing
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Bad Request: Missing email or password' });
+    }
+
+    // Find the user by email
+    const user = await users.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Verify the password
+    const isPasswordValid = bcrypt.compareSync(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    res.status(200).json({ message: 'Authentication successful' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+
 // POST route that adds a new book to the database and returns 201-status code
 app.post('/api/books', async (req, res, next) => {
   try {
@@ -80,6 +113,7 @@ app.post('/api/books', async (req, res, next) => {
     next(err);
   }
 });
+
 
 // PUT route to update a book by id
 app.put('/api/books/:id', async (req, res, next) => {

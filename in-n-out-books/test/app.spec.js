@@ -8,6 +8,8 @@ Description:TDD tests to test app.js
 
 const request = require('supertest');
 const app = require('../src/app');
+const bcrypt = require('bcryptjs');
+const users = require('../database/users');
 
 describe(' Chapter 4: API Tests', () => {
 
@@ -104,5 +106,58 @@ describe('Chapter 4: API Tests for PUT Route', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toHaveProperty('message', 'Bad Request: Missing Title');
+  });
+});
+
+describe('Chapter 6: API Tests', () => {
+  
+  beforeAll(async () => {
+    // Prepare your test data in the database
+    const testUser = {
+      email: 'test@example.com',
+      password: bcrypt.hashSync('password123', 8) // Create a hashed password
+    };
+
+    // Insert the test user into the database
+    await users.insertOne(testUser);
+  });
+
+  afterAll(async () => {
+    // Cleanup: Remove the test user after tests
+    await users.deleteOne({ email: 'test@example.com' });
+  });
+
+  test('It should log a user in and return a 200 status with "Authentication successful" message', async () => {
+    const response = await request(app)
+      .post('/api/login')
+      .send({ email: 'test@example.com', password: 'password123' }); // Correct credentials
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe('Authentication successful');
+  });
+
+  test('It should return a 401 status with "Unauthorized" message when logging in with incorrect credentials', async () => {
+    const response = await request(app)
+      .post('/api/login')
+      .send({ email: 'test@example.com', password: 'wrongpassword' }); // Incorrect password
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe('Unauthorized');
+  });
+
+  test('It should return a 400 status code with "Bad Request" when missing email or password', async () => {
+    let response = await request(app)
+      .post('/api/login')
+      .send({ email: 'test@example.com' }); // Missing password
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('Bad Request: Missing email or password');
+
+    response = await request(app)
+      .post('/api/login')
+      .send({ password: 'password123' }); // Missing email
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('Bad Request: Missing email or password');
   });
 });
