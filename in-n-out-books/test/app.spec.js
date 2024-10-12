@@ -6,15 +6,25 @@ Filename:app.spec.js
 Description:TDD tests to test app.js
 */
 
+/*
+Write unit tests for this route using Jest in your app.spec.js file. You should write the tests before you implement the routes, following TDD principles. Create a test suite named “Chapter [Number]: API Tests”. Use the following test cases:
+
+  a. It should return a 200 status with ‘Security questions successfully answered’ message.
+
+  b. It should return a 400 status code with ‘Bad Request’ message when the request body fails ajv validation.
+  
+  c. It should return a 401 status code with ‘Unauthorized’ message when the security questions are incorrect.
+*/
 const request = require('supertest');
 const app = require('../src/app');
 const bcrypt = require('bcryptjs');
 const users = require('../database/users');
 
-describe(' Chapter 4: API Tests', () => {
+
+describe(' Chapter 3: API Tests', () => {
 
   // Test for /api/books
-  test('Should return an array of books', async ()=> {
+  it('Should return an array of books', async ()=> {
     const response = await request(app).get('/api/books');
     expect(response.status).toBe(200);
     expect(response.body).toBeInstanceOf(Array);
@@ -22,7 +32,7 @@ describe(' Chapter 4: API Tests', () => {
   });
 
   //test for /api/books/:id
-  test('Should return a single book', async ()=> {
+  it('Should return a single book', async ()=> {
     const response = await request(app).get('/api/books/1');
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('id', 1);
@@ -31,7 +41,7 @@ describe(' Chapter 4: API Tests', () => {
   });
 
   //Test for invalid ID
-  test('should return a 400 error if the id is not a number', async() => {
+  it('should return a 400 error if the id is not a number', async() => {
     const response = await request(app).get('/api/books/abc');
     expect(response.status).toBe(400);
     expect(response.body).toHaveProperty('message', 'ID must be a number');
@@ -39,7 +49,7 @@ describe(' Chapter 4: API Tests', () => {
 });
 
 describe('Chapter 4: API Tests pt 2', ()=> {
-  test('Should return a 201-status code when adding a new book', async () =>{
+  it('Should return a 201-status code when adding a new book', async () =>{
     const response = await request(app)
       .post('/api/books')
       .send({
@@ -51,7 +61,7 @@ describe('Chapter 4: API Tests pt 2', ()=> {
     expect(response.body).toHaveProperty('id')
   });
 
-  test('should return a 400-status code when adding a new book with missing title', async () =>{
+  it('should return a 400-status code when adding a new book with missing title', async () =>{
     const response = await request(app)
       .post('/api/books')
       .send({
@@ -65,14 +75,14 @@ describe('Chapter 4: API Tests pt 2', ()=> {
     expect(response.body.message).toBe('Bad Request');
   });
 
-  test('should return a 204-status code when deleting a book', async () =>{
+  it('should return a 204-status code when deleting a book', async () =>{
     const res = await request(app).delete("/api/books/99");
   }, 10000);
 });
 
-describe('Chapter 4: API Tests for PUT Route', () => {
+describe('Chapter 5: API Tests for PUT Route', () => {
   // Test for successful book update
-  test('Should update a book and return a 204-status code', async () => {
+  it('Should update a book and return a 204-status code', async () => {
     const response = await request(app)
       .put('/api/books/1')
       .send({
@@ -84,7 +94,7 @@ describe('Chapter 4: API Tests for PUT Route', () => {
   });
 
   // Test for non-numeric id
-  test('Should return a 400-status code when using a non-numeric id', async () => {
+  it('Should return a 400-status code when using a non-numeric id', async () => {
     const response = await request(app)
       .put('/api/books/foo')
       .send({
@@ -97,7 +107,7 @@ describe('Chapter 4: API Tests for PUT Route', () => {
   });
 
   // Test for missing title in the update
-  test('Should return a 400-status code when updating a book with a missing title', async () => {
+  it('Should return a 400-status code when updating a book with a missing title', async () => {
     const response = await request(app)
       .put('/api/books/1')
       .send({
@@ -127,7 +137,7 @@ describe('Chapter 6: API Tests', () => {
     await users.deleteOne({ email: 'test@example.com' });
   });
 
-  test('It should log a user in and return a 200 status with "Authentication successful" message', async () => {
+  it('It should log a user in and return a 200 status with "Authentication successful" message', async () => {
     const response = await request(app)
       .post('/api/login')
       .send({ email: 'test@example.com', password: 'password123' }); // Correct credentials
@@ -136,7 +146,7 @@ describe('Chapter 6: API Tests', () => {
     expect(response.body.message).toBe('Authentication successful');
   });
 
-  test('It should return a 401 status with "Unauthorized" message when logging in with incorrect credentials', async () => {
+  it('It should return a 401 status with "Unauthorized" message when logging in with incorrect credentials', async () => {
     const response = await request(app)
       .post('/api/login')
       .send({ email: 'test@example.com', password: 'wrongpassword' }); // Incorrect password
@@ -145,7 +155,7 @@ describe('Chapter 6: API Tests', () => {
     expect(response.body.message).toBe('Unauthorized');
   });
 
-  test('It should return a 400 status code with "Bad Request" when missing email or password', async () => {
+  it('It should return a 400 status code with "Bad Request" when missing email or password', async () => {
     let response = await request(app)
       .post('/api/login')
       .send({ email: 'test@example.com' }); // Missing password
@@ -160,4 +170,54 @@ describe('Chapter 6: API Tests', () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toBe('Bad Request: Missing email or password');
   });
+});
+
+// Tests written to test the security questions
+describe('Chapter 7: API Tests', () => {
+  it("should return a 200 status code with a message of 'Security questions successfully answered' when answering the questions", async() => {
+    const res = await request(app)
+    .post("/api/users/hermione@hogwarts.edu/verify-security-question")
+    .send({
+      securityQuestions: [
+        {answer: "Crookshanks"},
+        {answer: "Hogwarts: A History"},
+        {answer: "Wilkins"}
+      ]
+    });
+
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.message).toEqual("Security questions successfully answered")
+  });
+
+  it("should return a 400 status code with a message of 'Bad Request: Invalid security questions format' when the request body fails ajv validation", async() => {
+      // Invalid request missing "answer" property
+  const res = await request(app)
+  .post("/api/users/hermione@hogwarts.edu/verify-security-question")
+  .send({
+    securityQuestions: [
+      {ans: "Crookshanks"},
+      {answer: "Hogwarts: A History"},
+      {answer: "Wilkins"}
+    ]
+  });
+
+  expect(res.statusCode).toEqual(400);
+  expect(res.body.message).toEqual("Bad Request: Invalid security questions format");
+  });
+
+  it("should return a 401 status code with 'Unauthorized' message when the security questions are incorrect.", async()=> {
+  // Invalid request missing "answer" property
+  const res = await request(app)
+  .post("/api/users/hermione@hogwarts.edu/verify-security-question")
+  .send({
+    securityQuestions: [
+      {answer: "Crooks"},
+      {answer: "A History"},
+      {answer: "Watkins"}
+    ]
+  });
+
+  expect(res.statusCode).toEqual(401);
+  expect(res.body.message).toEqual("Unauthorized: Incorrect")
+  })
 });

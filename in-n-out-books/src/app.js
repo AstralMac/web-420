@@ -7,13 +7,59 @@ File Name:app.js
 Description: This application will serve as a platform for managing collections of books.
 */
 
+/*
+You will be building the following route in your app.js file:
+
+  a. A POST route at /api/users/:email/verify-security-question that verifies a user’s security questions and returns a 200-status with ‘Security questions successfully answered’ message. To do this, you will need to compare the answers supplied in the request body against what’s saved in our mock database. Use a try-catch block to handle any errors, including checking if the request body fails ajv validation and throwing a 400 error if it does with applicable message. If the answers do not match what’s saved in the mock database, throw a 401 error with an ‘Unauthorized’ message.
+
+
+Grading:
+You will earn 20 points for each passing unit test, for a total of 60 points. If two tests pass,
+you will earn 40 points.
+Hints:
+• Remember to compare the req.body answers against the saved user’s answers from
+the mock database.
+• Use the toEqual method from Jest to write your assertions.
+• Use the npm package ajv for JSON schema validation (already included in the
+starter project). The validation should check if the request is an array of objects with
+a property for answer that is a string. No 
+*/
 //require the Express module and create an instance of it
 const express = require ('express');
 const bcrypt = require("bcryptjs");
 const app = express(); // Creates an Express application
 const books= require('../database/books'); // import the "books" collection
 const users = require('../database/users'); // import the "users"
-const collection = require('../database/collection'); // import collection
+const createError = require("http-errors");
+
+// New instance of AJV class
+const Ajv = require("ajv");
+const ajv = new Ajv();
+
+// JSON Schema for validating security questions
+const securityQuestionsSchema = {
+  type: "object",
+  properties: {
+    securityQuestions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          answer: { type: "string" }
+        },
+        required: ["answer"],
+        additionalProperties: false
+      },
+      minItems: 3,
+      maxItems: 3
+    }
+  },
+  required: ["securityQuestions"],
+  additionalProperties: false
+};
+
+// Compile the schema
+const validateSecurityQuestions = ajv.compile(securityQuestionsSchema);
 
 //middleware to parse JSON bodies
 app.use(express.json());
@@ -114,6 +160,37 @@ app.post('/api/books', async (req, res, next) => {
   }
 });
 
+//POST route for "users" to answer their security questions
+app.post('/api/users/:email/verify-security-question', async(req, res, next)=> {
+  try{
+    const {email} = req.params;
+    const {securityQuestions} = req.body;
+
+    // Validate the request body against the schema
+    const valid = validateSecurityQuestions(req.body);
+    if (!valid) {
+      console.error("Bad Request: Invalid Format", validateSecurityQuestions.errors);
+      return res.status(400).json({ message: "Bad Request: Invalid security questions format" });
+    }
+    // Fetch the user from the database
+    const user = await users.findOne({ email: email});
+    if(!user){
+      return res.status(404).json({message: "User not found"});
+    }
+    //Compare the provided answers with the stored answers
+    const areAnswersCorrect = securityQuestions.every((question, index) => {
+      return question.answer === user.securityQuestions[index].answer;
+    });
+
+    if (!areAnswersCorrect){
+      return res.status(401).json({message:"Unauthorized: Incorrect"});
+    }
+    // If all answers are correct
+    res.status(200).json({message:"Security questions successfully answered"});
+    }catch(error){
+      console.error("Error: ", error.message);
+    }
+});
 
 // PUT route to update a book by id
 app.put('/api/books/:id', async (req, res, next) => {
